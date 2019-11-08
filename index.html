@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+  <title> Assignment 4</title>
+
+ <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+   integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
+   crossorigin=""></script>
+ <style type="text/css">
+
+	h3 {color: green;}
+			h4 {color: green;}
+			.box {
+				display: flex;
+				justify-content: space-between;
+			}
+			.left {
+				background-color: white;
+				width : 200px;
+				border: 2px solid black;
+				border-radius:5px;
+				padding:5px;
+				margin: 2px;
+				text-align:center;
+			}
+			.right{
+				font-weight:normal;
+				font-style:italic;
+			}
+			text{
+				font-size: 10px;
+			}
+	 div.tooltip { 
+          position: absolute;     
+          text-align: center;     
+          width: 100px;          
+          height: 50px;         
+          padding: 2px;       
+          font: 12px sans-serif;    
+          background: white; 
+          border: 0px;        
+          pointer-events: none;     
+      }
+	  
+	  #counties-2017legend {
+	  width: 400px;
+	  height: 50px;
+	  margin: 5px;
+	  display: flex;
+	  flex-direction: column;
+	  }
+	  
+	  #counties-2017legend canvas {
+	  flex-grow: 1;
+	  width: 390px; /* leave room for svg labels to extend */
+	  margin-left: 5px; /* leave room for svg labels to extend */
+	  }
+	  
+	  #counties-difflegend svg {
+	  flex-grow: 0;
+	  }
+	  
+	  #counties-difflegend {
+	  width: 400px;
+	  height: 50px;
+	  margin: 5px;
+	  display: flex;
+	  flex-direction: column;
+	  }
+	  
+	  #counties-difflegend canvas {
+	  flex-grow: 1;
+	  width: 390px; /* leave room for svg labels to extend */
+	  margin-left: 5px; /* leave room for svg labels to extend */
+	  }
+	  
+	  #counties-difflegend svg {
+	  flex-grow: 0;
+	  }
+	  
+	  #counties-overlay {
+			width: 800px;
+			height: 600px;
+		}
+
+
+  </style>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.12.0/d3.min.js"></script>
+<!-- <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>-->
+</head>
+<body>
+  <h1>Info</h1>
+<div id ="info">
+		<div class ="box">
+		<div class="left">
+				<h3>Rahul Rao Madarapu</h3>
+				<h4>Z1857895</h4>
+		</div>
+		<div class="right">
+				<h5>Data Visualization (CS 490/680)</h5>
+				<h5>Assignment 3</h5>
+		</div>
+		</div>
+		<p>“This assignment is all my own work. I did not copy the code from any other source.”</p>
+		</div>
+  <h1>IL Counties Map</h1>
+  <div id="counties-map"></div>
+
+  <h1>IL Farmland Proportion 2017</h1>
+  <div id="counties-2017legend"></div>
+  <div id="counties-2017"></div>
+
+  <h1>IL Farmland Proportion Difference 2007-2017</h1>
+   <div id="counties-difflegend"></div>
+  <div id="counties-diff"></div>
+
+  <h1>Overlay</h1>
+  <div id="counties-overlay"></div>
+
+ 
+  <script type="text/javascript" ></script>
+</body>
+</html>
+<script>
+var map;
+
+		var color = d3.scaleSequential(d3.interpolateRdBu)
+		.domain([-25,30])
+		
+	map = L.map('counties-overlay').setView([41, -89], 6);
+
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+	
+	var svg = d3.select(map.getPanes().overlayPane).append("svg"),
+	g = svg.append("g").attr("class","leaflet-zoom-hide");
+	
+	 function projectPoint(x, y) {
+        let point = map.latLngToLayerPoint(new L.LatLng(y, x));
+        this.stream.point(point.x, point.y);
+	}
+	
+d3.json('https://figshare.com/s/99569e701ee51b4d5582').then(function(data){
+	var transform = d3.geoTransform({point: projectPoint});
+    var path = d3.geoPath().projection(transform);
+	
+      console.log(data)
+      var feature = g.selectAll("path")
+				.data(data.features)
+				.enter()
+				.append("path")
+				.style("stroke","black")
+				.style("opacity",0.5)
+				.style("fill", function(d){
+						var f_area = d.properties.area07_17;
+						//console.log(f_area)
+						if(f_area){
+						  return color(f_area);
+						} else {
+						  return "pink"
+						}
+				})
+
+      feature.attr("d", path)
+      
+      function render() {
+		  // getting boundaries
+        var bounds = map.getBounds();
+        var topLeft = map.latLngToLayerPoint(bounds.getNorthWest())
+        var bottomRight = map.latLngToLayerPoint(bounds.getSouthEast())
+        // adding boundaries to svg
+		svg.style("width", map.getSize().x + "px")
+          .style("height", map.getSize().y + "px")
+          .style("left", topLeft.x + "px")
+          .style("top", topLeft.y + "px");
+		  // using transform 
+        g.attr("transform", "translate(" + -topLeft.x + "," + -topLeft.y + ")");
+
+        feature.attr("d", path)
+      }
+
+      map.on("viewreset", function() {
+		feature.attr("d",path)
+      })
+      map.on("move", function() {
+		feature.attr("d",path)
+      })
+		map.on("movestart",function(){
+			feature.attr("d",path)
+		})
+		  render()
+		  });
+</script>
